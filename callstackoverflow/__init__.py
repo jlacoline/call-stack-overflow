@@ -82,7 +82,7 @@ def get_function(query, test_func=None, func_names=None):
                     logger.debug("Tests passed!")
                 return func
 
-def call_stackoverflow(query, *args, **kwargs):
+def call_stack_overflow(query, *args, **kwargs):
     result = {}
     def does_it_crash(f):
         try:
