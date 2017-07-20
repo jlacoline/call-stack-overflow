@@ -21,7 +21,6 @@ def _find_code_in_html(s):
         codez = map(lambda x: x.group(1), codez)
         for code in sorted(codez, key=lambda x: -len(x)):
             code = html.unescape(code)
-            code = re.sub(r"<[^>]+>([^<]*)<[^>]*>", "\1", code)
             yield code
 
 
@@ -39,12 +38,27 @@ def _search_for_def_keyword(names, code):
                 logger.debug("Code execution failed")
 
 def _generate_potential_names_from_query(query):
-    return set([query.lower().replace(" ", ""),
-                query.lower().replace(" ", "_"),
-                query.lower().split()[0]])
+    return list(set([query.lower().replace(" ", ""),
+                    query.lower().replace(" ", "_"),
+                    query.lower().split()[0]]))
+
+def _make_function_from_shell_script(code, name):
+    # keep only lines begining with ">>>"
+    lines = filter(lambda l:  l.startswith(">>>"), code.splitlines())
+    # remove ">>>"
+    lines = map(lambda l: l.replace(">>>", "").strip(), lines)
+    # remove empty lines (some answers may contain empty prompt lines)
+    lines = filter(lambda l: l, lines)
+    # add the "return" statement to the last instruction
+    if lines:
+        lines = list(lines)
+        lines[-1] = "return {}".format(lines[-1])
+    # indent lines
+    lines = map(lambda l: "    "+l, lines)
+    return "def {}():\n{}".format(name, "\n".join(lines))
 
 def get_function(query, test_func=None, func_names=None):
-    if func_names is None:
+    if not func_names:
         func_names = _generate_potential_names_from_query(query)
 
     # search on google
@@ -55,6 +69,8 @@ def get_function(query, test_func=None, func_names=None):
         logger.debug("Trying %s", link)
         raw_html = requests.get(link).text
         for code in _find_code_in_html(raw_html):
+            if code.startswith(">>>"):
+                code = _make_function_from_shell_script(code, func_names[0])
             for func in _search_for_def_keyword(func_names, code):
                 # execute tests
                 if test_func is not None:
@@ -78,4 +94,4 @@ def call_stackoverflow(query, *args, **kwargs):
     if "out" in result:
         return result["out"]
     else:
-        raise NameError("No function found for {}".format(query))
+        raise NameError('No result found for "{}"'.format(query))
