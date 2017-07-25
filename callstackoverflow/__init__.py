@@ -12,12 +12,19 @@ level = logging.DEBUG if os.environ.get("CALLSTACKOVERFLOW_DEBUG") \
 logging.basicConfig(format="%(message)s", level=level)
 logger = logging.getLogger("callstackoverflow")
 
+
+RE_ANSWER = re.compile(r'<div id="answer-.*?</table', re.DOTALL)
+RE_CODE = re.compile(
+    r"<pre[^>]*>[^<]*<code[^>]*>((?:\s|[^<]|<span[^>]*>[^<]+</span>)*)"
+    r"</code></pre>")
+
+
 # Credits to Filip Haglund for stackoverflow html parsing
 # https://github.com/drathier/stack-overflow-import
 def _find_code_in_html(s):
-    answers = re.findall(r'<div id="answer-.*?</table', s, re.DOTALL)
+    answers = re.findall(RE_ANSWER, s)
     for answer in answers:
-        codez = re.finditer(r"<pre[^>]*>[^<]*<code[^>]*>((?:\s|[^<]|<span[^>]*>[^<]+</span>)*)</code></pre>", answer)
+        codez = re.finditer(RE_CODE, answer)
         codez = map(lambda x: x.group(1), codez)
         for code in sorted(codez, key=lambda x: -len(x)):
             code = html.unescape(code)
@@ -27,7 +34,7 @@ def _find_code_in_html(s):
 def _search_for_def_keyword(names, code):
     for name in names:
         if "def {}(".format(name) in code:
-            logger.debug ("Found function definition in code")
+            logger.debug("Found function definition in code")
             logger.debug(code)
             try:
                 # try to exec code
@@ -37,10 +44,12 @@ def _search_for_def_keyword(names, code):
             except Exception:  # any exception
                 logger.debug("Code execution failed")
 
+
 def _generate_potential_names_from_query(query):
     return list(set([query.lower().replace(" ", ""),
                     query.lower().replace(" ", "_"),
                     query.lower().split()[0]]))
+
 
 def _make_function_from_shell_script(code, name):
     # keep only lines begining with ">>>"
@@ -56,6 +65,7 @@ def _make_function_from_shell_script(code, name):
     # indent lines
     lines = map(lambda l: "    "+l, lines)
     return "def {}():\n{}".format(name, "\n".join(lines))
+
 
 def get_function(query, test_func=None, func_names=None):
     if not func_names:
