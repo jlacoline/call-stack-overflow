@@ -13,14 +13,13 @@ level = logging.DEBUG if os.environ.get("CALLSTACKOVERFLOW_DEBUG") \
 logging.basicConfig(format="%(message)s", level=level)
 logger = logging.getLogger("callstackoverflow")
 
-
 RE_ANSWER = re.compile(r'<div id="answer-.*?</table', re.DOTALL)
 RE_CODE = re.compile(
     r"<pre[^>]*>[^<]*<code[^>]*>((?:\s|[^<]|<span[^>]*>[^<]+</span>)*)"
     r"</code></pre>")
 RE_DOC_URL = re.compile(
-    r"<a href=([\"\']"
-    r"https://docs\.python\.org/(?:\d/)?library/(.*).html#([^\"^\']*))[\"\']")
+    r"<a href=([\"\']https://docs\.python\.org"
+    r"/(?:\d/)?library/([^#]*).html#([^\"^\']*))[\"\']")
 
 
 # Credits to Filip Haglund for stackoverflow html parsing
@@ -101,8 +100,8 @@ def get_function(query, test_func=None, func_names=None):
         logger.debug("Trying %s", link)
         raw_html = requests.get(link).text
         for code in itertools.chain(
-                _find_doc_url_in_html_and_make_code(raw_html),
-                _find_code_in_html(raw_html)):
+                _find_code_in_html(raw_html),
+                _find_doc_url_in_html_and_make_code(raw_html)):
             if code.startswith(">>>"):
                 code = _make_function_from_shell_script(code, func_names[0])
             for func in _search_for_def_keyword(func_names, code):
