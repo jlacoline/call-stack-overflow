@@ -3,14 +3,25 @@ import requests
 import html
 import re
 import logging
+import logging.config
 import itertools
 
 from google import search
 
 
-level = logging.DEBUG if os.environ.get("CALLSTACKOVERFLOW_DEBUG") \
-    else logging.INFO
-logging.basicConfig(format="%(message)s", level=level)
+level = os.environ.get("CALLSTACKOVERFLOW_LOGLEVEL", logging.CRITICAL)
+logging.config.dictConfig({
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'default': {'format': '%(asctime)s - %(levelname)s - %(message)s'}},
+    'level': level,
+    'loggers': {'': {'handlers': ['default'], 'level': level}},
+    'handlers': {'default': {
+        'level': level,
+        'formatter': 'default',
+        'class': 'logging.StreamHandler'}}
+})
 logger = logging.getLogger("callstackoverflow")
 
 RE_ANSWER = re.compile(r'<div id="answer-.*?</table', re.DOTALL)
@@ -54,15 +65,14 @@ def code_from_python_doc(*args, **kwargs):
 def _search_for_def_keyword(names, code):
     for name in names:
         if "def {}(".format(name) in code:
-            logger.debug("Found function definition in code")
-            logger.debug(code)
+            logger.debug("Trying out this code:\n%s", code)
             try:
                 # try to exec code
                 scope = {}
                 exec(code, scope)
                 yield scope[name]
-            except Exception:  # any exception
-                logger.debug("Code execution failed")
+            except Exception as err:
+                logger.debug("Code execution failed: %s", err)
 
 
 def _generate_potential_names_from_query(query):
@@ -93,11 +103,13 @@ def get_function(query, test_func=None, func_names=None):
     func_names.append("code_from_python_doc")  # super ugly, refactor asap
 
     # search on google
-    links = search("site:stackoverflow.com python {}".format(query), stop=1)
+    google_query = "site:stackoverflow.com python {}".format(query)
+    logger.info('Querying google with "%s"', google_query)
+    links = search(google_query, stop=1)
 
     # get html from stackoverflow and parse it
     for link in links:
-        logger.debug("Trying %s", link)
+        logger.info("Parsing stackoverflow answers at %s", link)
         raw_html = requests.get(link).text
         for code in itertools.chain(
                 _find_code_in_html(raw_html),
@@ -105,14 +117,15 @@ def get_function(query, test_func=None, func_names=None):
             if code.startswith(">>>"):
                 code = _make_function_from_shell_script(code, func_names[0])
             for func in _search_for_def_keyword(func_names, code):
+                logger.info("Found callable function, lauching tests")
                 # execute tests
                 if test_func is not None:
                     try:
                         test_func(func)
                     except Exception as exc:
-                        logger.debug("Tests failed: {}".format(exc))
+                        logger.debug("Tests failed: %s", exc)
                         continue
-                    logger.debug("Tests passed!")
+                    logger.info("Tests passed! Returning function")
                 return func
 
 
