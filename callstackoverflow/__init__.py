@@ -75,21 +75,20 @@ def get_function(query, test_func=None, func_names=None):
                 # execute tests
                 if test_func is not None:
                     try:
-                        assert test_func(func)
-                    except Exception:
-                        logger.debug("Tests failed")
+                        test_func(func)
+                    except Exception as exc:
+                        logger.debug("Tests failed: {}".format(exc))
                         continue
                     logger.debug("Tests passed!")
                 return func
 
+
 def call_stack_overflow(query, *args, **kwargs):
     result = {}
+
     def does_it_crash(f):
-        try:
-            result["out"] = f(*args, **kwargs)
-        except Exception:
-            return False
-        return True
+        result["out"] = f(*args, **kwargs)
+
     get_function(query, does_it_crash)
     if "out" in result:
         return result["out"]
