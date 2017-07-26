@@ -42,6 +42,7 @@ try:
 except Exception:
     pass
 
-__code_from_python_doc__ = {}
+def __code_from_python_doc__(*args, **kwargs):
+    return {}(*args, **kwargs)
     """.format(lib, name)
     return get_function_from_code(code, "__code_from_python_doc__")
