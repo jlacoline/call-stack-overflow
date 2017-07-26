@@ -20,11 +20,12 @@ M_ALL = [M_SEARCH_FOR_DEF, M_PARSE_SHELL_SCRIPTS, M_READ_DOCUMENTATION_LINKS]
 level = os.environ.get("CALLSTACKOVERFLOW_LOGLEVEL", logging.CRITICAL)
 logging.config.dictConfig({
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'formatters': {
-        'default': {'format': '%(asctime)s - %(levelname)s - %(message)s'}},
-    'level': level,
-    'loggers': {'': {'handlers': ['default'], 'level': level}},
+        'default': {
+            'format': '%(asctime)s - %(levelname)s - %(name)s - %(message)s'}},
+    'loggers': {'': {'handlers': ['default'], 'level': level},
+                'urllib3': {'level': logging.WARNING}},
     'handlers': {'default': {
         'level': level,
         'formatter': 'default',
