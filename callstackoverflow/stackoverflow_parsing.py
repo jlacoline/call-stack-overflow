@@ -12,7 +12,7 @@ RE_DOC_URL = re.compile(
     r"/(?:\d/)?library/([^#]*).html#([^\"^\']*))[\"\']")
 
 
-def get_answers(raw_html):
+def find_answers(raw_html):
     # TODO parse author name
     return re.findall(RE_ANSWER, raw_html)  # finditer?
 
