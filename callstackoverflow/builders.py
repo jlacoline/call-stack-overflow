@@ -1,3 +1,4 @@
+import re
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,17 +17,18 @@ def get_function_from_code(code, name):
 
 
 def make_function_from_shell_script(code):
-    # keep only lines begining with ">>>"
-    lines = list(filter(lambda l:  l.startswith(">>>"), code.splitlines()))
-    if not lines:
-        return None
-    # remove ">>>"
-    lines = map(lambda l: l.replace(">>>", "").strip(), lines)
-    # remove empty lines (some answers may contain empty prompt lines)
-    lines = filter(lambda l: l, lines)
+    lines = code.splitlines()
+    # if prompt characters are dectected,remove them
+    for prompt in [r"^>>> (.*)", r"^In\[\d+\]: (.*)"]:
+        if any(map(lambda l:  re.match(prompt, l), lines)):
+            lines = map(lambda l: re.sub(prompt, r"\1", l).strip()
+                        if re.match(prompt, l) else "", lines)
+            break
+    # remove empty lines
+    lines = list(filter(lambda l: l, lines))
     # add the "return" statement to the last instruction
     if lines:
-        lines = list(lines)
+        lines[-1] = re.sub(r"^print\s*\(([^\)]*)\)", r"\1", lines[-1]).strip()
         lines[-1] = "return {}".format(lines[-1])
     # indent lines
     lines = map(lambda l: "    "+l, lines)
