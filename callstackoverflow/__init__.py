@@ -75,11 +75,7 @@ def call_stack_overflow(query, *args, **kwargs):
     def just_run_it(f):
         result["out"] = f(*args, **kwargs)
 
-    if args or kwargs:
-        methods = [M_SEARCH_FOR_DEF, M_READ_DOCUMENTATION_LINKS]
-    else:
-        methods = M_ALL
-    if get_function(query, just_run_it, methods=methods) is not None:
+    if get_function(query, just_run_it) is not None:
         return result["out"]
     else:
         raise NameError('No result found for "{}"'.format(query))
