@@ -51,6 +51,11 @@ def get_function(query, tester=None, methods=M_ALL, func_names=None):
         return f is not None and apply_tests(f, tester)
 
     for answer in web.fetch_stackoverflow_answers(query):
+        if M_READ_DOCUMENTATION_LINKS in methods:
+            for doc in parser.find_documentation_url_in_answer(answer):
+                f = make_function_from_documentation(doc["lib"], doc["func"])
+                if _validate():
+                    return f
         if M_SEARCH_FOR_DEF in methods or M_PARSE_SHELL_SCRIPTS in methods:
             for code in parser.find_code_in_answer(answer):
                 if M_SEARCH_FOR_DEF in methods:
@@ -62,11 +67,6 @@ def get_function(query, tester=None, methods=M_ALL, func_names=None):
                     f = make_function_from_shell_script(code)
                     if _validate():
                         return f
-        if M_READ_DOCUMENTATION_LINKS in methods:
-            for doc in parser.find_documentation_url_in_answer(answer):
-                f = make_function_from_documentation(doc["lib"], doc["func"])
-                if _validate():
-                    return f
 
 
 def call_stack_overflow(query, *args, **kwargs):
