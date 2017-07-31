@@ -1,3 +1,7 @@
+import re
+import ast
+from functools import reduce
+from operator import add
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,23 +20,59 @@ def get_function_from_code(code, name):
 
 
 def make_function_from_shell_script(code):
-    # keep only lines begining with ">>>"
-    lines = list(filter(lambda l:  l.startswith(">>>"), code.splitlines()))
-    if not lines:
-        return None
-    # remove ">>>"
-    lines = map(lambda l: l.replace(">>>", "").strip(), lines)
-    # remove empty lines (some answers may contain empty prompt lines)
-    lines = filter(lambda l: l, lines)
+    lines = code.splitlines()
+    # if prompt characters are dectected,remove them
+    for prompt in [r"^>>> (.*)", r"^In\[\d+\]: (.*)"]:
+        if any(map(lambda l:  re.match(prompt, l), lines)):
+            lines = map(lambda l: re.sub(prompt, r"\1", l).strip()
+                        if re.match(prompt, l) else "", lines)
+            break
+    # remove empty lines
+    lines = list(filter(lambda l: l, lines))
     # add the "return" statement to the last instruction
     if lines:
-        lines = list(lines)
+        lines[-1] = re.sub(r"^print\s*\(([^\)]*)\)", r"\1", lines[-1]).strip()
         lines[-1] = "return {}".format(lines[-1])
-    # indent lines
-    lines = map(lambda l: "    "+l, lines)
-    defcode = "def {}():\n{}".format("__function_from_shell_script__",
-                                     "\n".join(lines))
-    return get_function_from_code(defcode, "__function_from_shell_script__")
+
+    try:
+        tree = ast.parse("\n".join(lines))
+        params = _ast_parametrize_constants(tree)
+        tree.body = [ast.FunctionDef(
+            name="__function_from_shell_script__",
+            args=ast.arguments(
+                args=[ast.arg(arg=arg) for arg, _ in params],
+                defaults=[default for _, default in params],
+                kw_defaults=[], kwarg=None, kwonlyargs=[], vararg=None),
+            body=tree.body,
+            decorator_list=[])]
+        ast.fix_missing_locations(tree)
+        scope = {}
+        exec(compile(tree, "<string>", "exec"), scope)
+        logger.info("Successfully built a fonction from this shell script:\n{}"
+                    .format(code))
+        return scope["__function_from_shell_script__"]
+    except Exception:
+        return None
+
+
+def _ast_parametrize_constants(tree):
+    class _NodeTransformer(ast.NodeTransformer):
+        def __init__(self):
+            self._params = {key: [] for key in ["str", "num"]}
+
+        def visit_Str(self, node):
+            name = "__{}_arg_{}__".format("str", len(self._params["str"]))
+            self._params["str"].append((name, node))
+            return ast.copy_location(ast.Name(name, ast.Load()), node)
+
+        def visit_Num(self, node):
+            name = "__{}_arg_{}__".format("num", len(self._params["num"]))
+            self._params["num"].append((name, node))
+            return ast.copy_location(ast.Name(name, ast.Load()), node)
+
+    transformer = _NodeTransformer()
+    transformer.visit(tree)
+    return reduce(add, transformer._params.values())
 
 
 def make_function_from_documentation(lib, name):
