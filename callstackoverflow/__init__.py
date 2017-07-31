@@ -1,4 +1,5 @@
 import os
+import itertools
 import logging
 import logging.config
 
@@ -39,33 +40,48 @@ def _generate_potential_names_from_query(query):
                     query.lower().split()[0]]))
 
 
+def _function_args_permutations(fun):
+    n = fun.__code__.co_argcount
+    for permutation in itertools.permutations(range(n)):
+        def _f(*args):
+            return fun(*[args[i] for i in permutation])
+        yield _f
+
+
+def _validate(f, tester):
+    if f is not None:
+        for permutated in _function_args_permutations(f):
+            if apply_tests(permutated, tester):
+                return permutated
+    return None
+
+
 def get_function(query, tester=None, methods=M_ALL, func_names=None):
     if not methods:
         return None
     if not func_names and M_SEARCH_FOR_DEF in methods:
         func_names = _generate_potential_names_from_query(query)
 
-    f = None
-
-    def _validate():
-        return f is not None and apply_tests(f, tester)
-
     for answer in web.fetch_stackoverflow_answers(query):
         if M_READ_DOCUMENTATION_LINKS in methods:
             for doc in parser.find_documentation_url_in_answer(answer):
-                f = make_function_from_documentation(doc["lib"], doc["func"])
-                if _validate():
+                f = _validate(
+                    make_function_from_documentation(doc["lib"], doc["func"]),
+                    tester)
+                if f is not None:
                     return f
         if M_SEARCH_FOR_DEF in methods or M_PARSE_SHELL_SCRIPTS in methods:
             for code in parser.find_code_in_answer(answer):
                 if M_SEARCH_FOR_DEF in methods:
                     for name in func_names:
-                        f = get_function_from_code(code, name)
-                        if _validate():
+                        f = _validate(get_function_from_code(code, name),
+                                      tester)
+                        if f is not None:
                             return f
                 if M_PARSE_SHELL_SCRIPTS in methods:
-                    f = make_function_from_shell_script(code)
-                    if _validate():
+                    f = _validate(make_function_from_shell_script(code),
+                                  tester)
+                    if f is not None:
                         return f
 
 
