@@ -8,6 +8,14 @@ def test_simple_calls():
         ["hello", "python", "world"]
     assert call_stack_overflow("gcd", 20, 30) == 10
     assert call_stack_overflow("fibonacci", 7) == 13
+    assert "hello new line" == \
+        call_stack_overflow('remove \\n from string',
+                            "hello new line\n") == \
+        call_stack_overflow('remove newline from string',
+                            "hello new line\n") == \
+        call_stack_overflow('remove expression from string',
+                            "hello new line\n",
+                            "\n")
 
 
 if __name__ == "__main__":  # no need of pytest for the moment
