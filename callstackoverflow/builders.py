@@ -26,6 +26,11 @@ def get_function_from_code(code, name):
                      .format(name))
 
 
+def search_for_def_keyword(code):
+    for name in re.findall(r"def ([^\(]+)\(", code):
+        yield get_function_from_code(code, name)
+
+
 def make_function_from_shell_script(code):
     lines = code.splitlines()
     # if prompt characters are dectected,remove them

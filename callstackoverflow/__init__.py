@@ -3,7 +3,7 @@ import logging
 import logging.config
 
 
-from .builders import get_function_from_code, \
+from .builders import search_for_def_keyword, \
                       make_function_from_shell_script, \
                       make_function_from_documentation
 from . import stackoverflow_parsing as parser
@@ -33,17 +33,9 @@ logging.config.dictConfig({
 logger = logging.getLogger(__name__)
 
 
-def _generate_potential_names_from_query(query):
-    return list(set([query.lower().replace(" ", ""),
-                    query.lower().replace(" ", "_"),
-                    query.lower().split()[0]]))
-
-
-def get_function(query, tester=None, methods=M_ALL, func_names=None):
+def get_function(query, tester=None, methods=M_ALL):
     if not methods:
         return None
-    if not func_names and M_SEARCH_FOR_DEF in methods:
-        func_names = _generate_potential_names_from_query(query)
 
     def _validate(fun):
         return fun is not None and apply_tests(fun, tester)
@@ -58,8 +50,7 @@ def get_function(query, tester=None, methods=M_ALL, func_names=None):
             for code in parser.find_code_in_answer(answer):
                 logger.debug("Trying this code:\n%s", code)
                 if M_SEARCH_FOR_DEF in methods:
-                    for name in func_names:
-                        f = get_function_from_code(code, name)
+                    for f in search_for_def_keyword(code):
                         if _validate(f):
                             return f
                 if M_PARSE_SHELL_SCRIPTS in methods:
