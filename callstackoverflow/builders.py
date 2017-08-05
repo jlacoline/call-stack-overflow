@@ -1,5 +1,7 @@
 import re
 import ast
+import copy
+from itertools import permutations
 from functools import reduce
 from operator import add
 import logging
@@ -8,15 +10,20 @@ logger = logging.getLogger(__name__)
 
 
 def get_function_from_code(code, name):
-    if "def {}(".format(name) in code:
-        logger.debug("Trying to exec this this code:\n%s", code)
-        try:
-            # try to exec code
-            scope = {}
-            exec(code, scope)
-            return scope[name]
-        except Exception as err:
-            logger.debug("Code execution failed: %s", err)
+    try:
+        # try to exec code
+        scope = {}
+        exec(code, scope)
+    except Exception as err:
+        logger.debug("Code execution failed: %s", err)
+        return None
+    try:
+        fun = scope[name]
+        assert(callable(fun))
+        return fun
+    except (KeyError, AssertionError):
+        logger.debug('could not find a function named "{}" in code'
+                     .format(name))
 
 
 def make_function_from_shell_script(code):
@@ -36,23 +43,37 @@ def make_function_from_shell_script(code):
 
     try:
         tree = ast.parse("\n".join(lines))
-        params = _ast_parametrize_constants(tree)
-        tree.body = [ast.FunctionDef(
+    except SyntaxError as err:
+        logger.debug("ast parsing failed: %s", err)
+        raise StopIteration()
+    params = _ast_parametrize_constants(tree)
+    logsuccess = False
+    for deftree in _add_func_def_to_ast_tree(tree, params):
+        scope = {}
+        try:
+            exec(compile(deftree, "<string>", "exec"), scope)
+        except Exception as err:
+            logger.debug("building function from shell script failed: %s", err)
+            raise StopIteration()
+        if not logsuccess:
+            logger.info("Successfully built a fonction from shell script")
+            logsuccess = True
+        yield scope["__function_from_shell_script__"]
+
+
+def _add_func_def_to_ast_tree(tree, params):
+    for permutation in permutations(range(len(params))):
+        newtree = copy.deepcopy(tree)
+        newtree.body = [ast.FunctionDef(
             name="__function_from_shell_script__",
             args=ast.arguments(
-                args=[ast.arg(arg=arg) for arg, _ in params],
-                defaults=[default for _, default in params],
+                args=[ast.arg(arg=params[i][0]) for i in permutation],
+                defaults=[params[i][1] for i in permutation],
                 kw_defaults=[], kwarg=None, kwonlyargs=[], vararg=None),
-            body=tree.body,
+            body=newtree.body,
             decorator_list=[])]
-        ast.fix_missing_locations(tree)
-        scope = {}
-        exec(compile(tree, "<string>", "exec"), scope)
-        logger.info("Successfully built a fonction from this shell script:\n{}"
-                    .format(code))
-        return scope["__function_from_shell_script__"]
-    except Exception:
-        return None
+        ast.fix_missing_locations(newtree)
+        yield newtree
 
 
 def _ast_parametrize_constants(tree):
