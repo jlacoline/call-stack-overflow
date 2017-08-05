@@ -41,11 +41,15 @@ def make_function_from_shell_script(code):
             break
     # remove empty lines
     lines = list(filter(lambda l: l, lines))
-    # add the "return" statement to the last line and remove "print"
-    # instruction if found. TODO implement this in ast
+
+    # format last line. TODO implement this in ast
     if lines:
+        # remove the "print" instruction if found
         lines[-1] = re.sub(r"^print\s*\(([^\)]*)\)", r"\1", lines[-1]).strip()
         lines[-1] = re.sub(r"^print\s+(.*)", r"\1", lines[-1]).strip()
+        # remove variable assignement if found
+        lines[-1] = re.sub(r"^[^=]+\s*=(.*)", r"\1", lines[-1]).strip()
+        # add a "return" statement
         lines[-1] = "return {}".format(lines[-1])
 
     try:
