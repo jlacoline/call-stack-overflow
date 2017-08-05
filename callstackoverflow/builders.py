@@ -36,9 +36,11 @@ def make_function_from_shell_script(code):
             break
     # remove empty lines
     lines = list(filter(lambda l: l, lines))
-    # add the "return" statement to the last instruction
+    # add the "return" statement to the last line and remove "print"
+    # instruction if found. TODO implement this in ast
     if lines:
         lines[-1] = re.sub(r"^print\s*\(([^\)]*)\)", r"\1", lines[-1]).strip()
+        lines[-1] = re.sub(r"^print\s+(.*)", r"\1", lines[-1]).strip()
         lines[-1] = "return {}".format(lines[-1])
 
     try:
