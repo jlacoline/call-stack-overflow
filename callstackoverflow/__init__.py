@@ -43,6 +43,8 @@ def get_function(query, tester=None, methods=M_ALL):
     for answer in web.fetch_stackoverflow_answers(query):
         if M_READ_DOCUMENTATION_LINKS in methods:
             for doc in parser.find_documentation_url_in_answer(answer):
+                logger.debug("Trying to make a function from this "
+                             "documentation link: %s", doc["link"])
                 f = make_function_from_documentation(doc["lib"], doc["func"])
                 if _validate(f):  # UGLY replicated code
                     return f
