@@ -2,17 +2,13 @@ import os
 import logging
 import logging.config
 
-
-from .builders import search_for_def_keyword, \
-                      make_function_from_shell_script, \
-                      make_function_from_documentation
-from . import stackoverflow_parsing as parser
+from . import builders
 from .testers import apply_tests
 from . import web
 
-M_SEARCH_FOR_DEF = "search for def keyword"
-M_PARSE_SHELL_SCRIPTS = "parse shell scripts"
-M_READ_DOCUMENTATION_LINKS = "read documentation links"
+M_SEARCH_FOR_DEF = builders.search_for_def_keyword
+M_PARSE_SHELL_SCRIPTS = builders.make_functions_from_shell_scripts
+M_READ_DOCUMENTATION_LINKS = builders.make_functions_from_documentation_links
 M_ALL = [M_SEARCH_FOR_DEF, M_PARSE_SHELL_SCRIPTS, M_READ_DOCUMENTATION_LINKS]
 
 
@@ -33,32 +29,20 @@ logging.config.dictConfig({
 logger = logging.getLogger(__name__)
 
 
-def get_function(query, tester=None, methods=M_ALL):
-    if not methods:
-        return None
-
-    def _validate(fun):
-        return fun is not None and apply_tests(fun, tester)
-
+def build_functions(query, methods):
     for answer in web.fetch_stackoverflow_answers(query):
-        if M_READ_DOCUMENTATION_LINKS in methods:
-            for doc in parser.find_documentation_url_in_answer(answer):
-                logger.debug("Trying to make a function from this "
-                             "documentation link: %s", doc["link"])
-                f = make_function_from_documentation(doc["lib"], doc["func"])
-                if _validate(f):  # UGLY replicated code
-                    return f
-        if M_SEARCH_FOR_DEF in methods or M_PARSE_SHELL_SCRIPTS in methods:
-            for code in parser.find_code_in_answer(answer):
-                logger.debug("Trying this code:\n%s", code)
-                if M_SEARCH_FOR_DEF in methods:
-                    for f in search_for_def_keyword(code):
-                        if _validate(f):
-                            return f
-                if M_PARSE_SHELL_SCRIPTS in methods:
-                    for f in make_function_from_shell_script(code):
-                        if _validate(f):
-                            return f
+        for method in methods:
+            for function in method(answer):
+                yield function
+
+
+def get_function(query, tester, methods=M_ALL):
+    for f in build_functions(query, methods):
+        if f is not None and apply_tests(f, tester):
+            return f
+    raise NotImplementedError(
+        'No fonction built with query "{}" passed the provided tests'
+        .format(query))
 
 
 def call_stack_overflow(query, *args, **kwargs):
@@ -67,7 +51,5 @@ def call_stack_overflow(query, *args, **kwargs):
     def just_run_it(f):
         result["out"] = f(*args, **kwargs)
 
-    if get_function(query, just_run_it) is not None:
-        return result["out"]
-    else:
-        raise NameError('No result found for "{}"'.format(query))
+    get_function(query, just_run_it)
+    return result["out"]
