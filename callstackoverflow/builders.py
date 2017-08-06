@@ -35,7 +35,7 @@ def search_for_def_keyword(answer):
 def make_functions_from_shell_scripts(answer):
     for code in parser.find_code_in_answer(answer):
         logger.debug(
-            "Trying to build a fonction from this shell script: %s", code)
+            "Trying to build a fonction from this shell script:\n%s", code)
         for fun in build_from_shell_script(code):
             yield fun
 
