@@ -1,12 +1,14 @@
 import ast
 import re
 import copy
-from itertools import permutations
+from itertools import permutations, islice
 from functools import reduce
 from operator import add
 import logging
 
 logger = logging.getLogger(__name__)
+
+PERMUTATIONS_LIMIT = 120  # = nb of permutations for 5 elements
 
 
 def build_from_shell_script(code):
@@ -71,7 +73,10 @@ def parametrize_constants(tree):
 
 
 def add_func_def_to_tree(tree, params):
-    for permutation in permutations(range(len(params))):
+    _permutations = permutations(range(len(params)))
+    # limit the number of permutations to avoid huge loops
+    _permutations = islice(_permutations, 0, PERMUTATIONS_LIMIT)
+    for permutation in _permutations:
         newtree = copy.deepcopy(tree)
         newtree.body = [ast.FunctionDef(
             name="__function_from_shell_script__",
