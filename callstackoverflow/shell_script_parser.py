@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def build_from_shell_script(code):
     lines = code.splitlines()
     # if prompt characters are dectected,remove them
-    for prompt in [r"^>>> (.*)", r"^In\ [\d+\]: (.*)"]:
+    for prompt in [r"^>>> (.*)", r"^In \[\d+\]: (.*)"]:
         if any(map(lambda l:  re.match(prompt, l), lines)):
             lines = map(lambda l: re.sub(prompt, r"\1", l).strip()
                         if re.match(prompt, l) else "", lines)
