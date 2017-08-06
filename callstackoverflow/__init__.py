@@ -9,7 +9,7 @@ from . import web
 M_SEARCH_FOR_DEF = builders.search_for_def_keyword
 M_PARSE_SHELL_SCRIPTS = builders.make_functions_from_shell_scripts
 M_READ_DOCUMENTATION_LINKS = builders.make_functions_from_documentation_links
-M_ALL = [M_SEARCH_FOR_DEF, M_PARSE_SHELL_SCRIPTS, M_READ_DOCUMENTATION_LINKS]
+M_ALL = [M_SEARCH_FOR_DEF, M_READ_DOCUMENTATION_LINKS, M_PARSE_SHELL_SCRIPTS]
 
 
 level = os.environ.get("CALLSTACKOVERFLOW_LOGLEVEL", logging.CRITICAL)
