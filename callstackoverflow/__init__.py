@@ -50,6 +50,8 @@ def call_stack_overflow(query, *args, **kwargs):
 
     def just_run_it(f):
         result["out"] = f(*args, **kwargs)
+        return True
 
-    get_function(query, just_run_it)
+    get_function(query, just_run_it,
+                 [M_SEARCH_FOR_DEF, M_READ_DOCUMENTATION_LINKS])
     return result["out"]
