@@ -30,5 +30,5 @@ def find_documentation_url_in_answer(answer):
         yield {
             "link": match.group(1),
             "lib": match.group(2),
-            "func": match.group(3)
+            "name": match.group(3)
         }
