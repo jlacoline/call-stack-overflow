@@ -10,5 +10,5 @@ setup(
     license='WTFPL',
     keywords='stackoverflow',
     packages=["callstackoverflow"],
-    install_requires=['requests', 'google']
+    install_requires=['requests', 'google', 'beautifulsoup4']
 )
