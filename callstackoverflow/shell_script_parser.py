@@ -22,15 +22,9 @@ def build_from_shell_script(code):
     # remove empty lines
     lines = list(filter(lambda l: l, lines))
 
-    # format last line. TODO implement this in ast
+    # format last line.
     if lines:
-        # remove the "print" instruction if found
-        lines[-1] = re.sub(r"^print\s*\(([^\)]*)\)", r"\1", lines[-1]).strip()
-        lines[-1] = re.sub(r"^print\s+(.*)", r"\1", lines[-1]).strip()
-        # remove variable assignement if found
-        lines[-1] = re.sub(r"^[^=]+\s*=(.*)", r"\1", lines[-1]).strip()
-        # add a "return" statement
-        lines[-1] = "return {}".format(lines[-1])
+        lines[-1] = clean_last_statement(lines[-1])
 
     try:
         tree = ast.parse("\n".join(lines))
@@ -50,6 +44,20 @@ def build_from_shell_script(code):
             logger.info("Successfully built a fonction from shell script")
             logsuccess = True
         yield scope["__function_from_shell_script__"]
+
+
+#  TODO implement this in ast
+def clean_last_statement(raw):
+    match = re.match(r"^(\s*)([^\s].*)$", raw)
+    indent, content = match.groups()
+    # remove the "print" instruction if found
+    content = re.sub(r"^print\s*\(([^\)]*)\)", r"\1", content).strip()
+    content = re.sub(r"^print\s+(.*)", r"\1", content).strip()
+    # remove variable assignement if found
+    content = re.sub(r"^[^=]+\s*=(.*)", r"\1", content).strip()
+    # add a "return" statement
+    content = "return {}".format(content)
+    return indent+content
 
 
 def parametrize_constants(tree):
