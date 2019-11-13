@@ -4,12 +4,13 @@ import logging.config
 
 from . import builders
 from .testers import apply_tests
+from .stackoverflow_parsing import find_stackoverflow_answers
 from . import web
 
 M_SEARCH_FOR_DEF = builders.search_for_def_keyword
 M_PARSE_SHELL_SCRIPTS = builders.make_functions_from_shell_scripts
 M_READ_DOCUMENTATION_LINKS = builders.make_functions_from_documentation_links
-M_ALL = [M_SEARCH_FOR_DEF, M_READ_DOCUMENTATION_LINKS, M_PARSE_SHELL_SCRIPTS]
+M_ALL = [M_READ_DOCUMENTATION_LINKS, M_SEARCH_FOR_DEF, M_PARSE_SHELL_SCRIPTS]
 
 
 level = os.environ.get("CALLSTACKOVERFLOW_LOGLEVEL", logging.CRITICAL)
@@ -30,10 +31,11 @@ logger = logging.getLogger(__name__)
 
 
 def build_functions(query, methods):
-    for answer in web.fetch_stackoverflow_answers(query):
-        for method in methods:
-            for function in method(answer):
-                yield function
+    for raw_html in web.fetch_stackoverflow_html(query):
+        for answer in find_stackoverflow_answers(raw_html):
+            for method in methods:
+                for function in method(answer):
+                    yield function
 
 
 def get_function(query, tester, methods=M_ALL):

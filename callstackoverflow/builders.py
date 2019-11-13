@@ -1,7 +1,6 @@
 import re
 import logging
 
-from . import stackoverflow_parsing as parser
 from .shell_script_parser import build_from_shell_script
 
 logger = logging.getLogger(__name__)
@@ -25,25 +24,25 @@ def _get_function_from_code(code, name):
 
 
 def search_for_def_keyword(answer):
-    for code in parser.find_code_in_answer(answer):
-        logger.debug(
+    for code in answer.code_blocks():
+        logger.info(
             "Trying to find function definitions in this code:\n%s", code)
         for name in re.findall(r"def ([^\(]+)\(", code):
             yield _get_function_from_code(code, name)
 
 
 def make_functions_from_shell_scripts(answer):
-    for code in parser.find_code_in_answer(answer):
-        logger.debug(
+    for code in answer.code_blocks():
+        logger.info(
             "Trying to build a fonction from this shell script:\n%s", code)
         for fun in build_from_shell_script(code):
             yield fun
 
 
 def make_functions_from_documentation_links(answer):
-    for doclink in parser.find_documentation_url_in_answer(answer):
-        logger.debug("Trying to make a function from this "
-                     "documentation link: %s", doclink["link"])
+    for doclink in answer.doc_links():
+        logger.info("Trying to make a function from this "
+                    "documentation link: %s", doclink["link"])
 
         code = """
 try:

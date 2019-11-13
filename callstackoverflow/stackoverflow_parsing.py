@@ -1,28 +1,36 @@
-import html
 import re
 
-# Credits to Filip Haglund for the original html code parsing
-# https://github.com/drathier/stack-overflow-import
-RE_CODE = re.compile(
-    r"<pre[^>]*>[^<]*<code[^>]*>((?:\s|[^<]|<span[^>]*>[^<]+</span>)*)"
-    r"</code></pre>")
+from bs4 import BeautifulSoup
+
+
 RE_DOC_URL = re.compile(
-    r"<a href=([\"\']https://docs\.python\.org"
-    r"/(?:\d/)?library/([^#]*).html#([^\"^\']*))[\"\']")
+    r"https?://docs\.python\.org/(?:\d/)?library/([^#]*).html#(.*)")
 
 
-def find_code_in_answer(answer):
-    codez = re.finditer(RE_CODE, answer)
-    codez = map(lambda x: x.group(1), codez)
-    for code in sorted(codez, key=lambda x: -len(x)):
-        code = html.unescape(code)
-        yield code
+def find_stackoverflow_answers(raw_html):
+    soup = BeautifulSoup(raw_html, 'html.parser')  # TODO try except
+    answers_tags = soup.find_all("div", id=re.compile(r"answer-.*"))
+    for answer_tag in answers_tags:
+        yield Answer(answer_tag)
 
 
-def find_documentation_url_in_answer(answer):
-    for match in re.finditer(RE_DOC_URL, answer):
-        yield {
-            "link": match.group(1),
-            "lib": match.group(2),
-            "name": match.group(3)
-        }
+class Answer:
+    def __init__(self, bs_tag):
+        self._tag = bs_tag
+
+    def code_blocks(self):
+        blocks = self._tag.find_all("code")
+        for block in blocks:
+            yield block.text
+
+    def doc_links(self):
+        doc_links = self._tag.find_all("a", href=RE_DOC_URL)
+        for doc_link in doc_links:
+            # running through the samex regex again, not optimized
+            href = doc_link.attrs["href"]
+            match = RE_DOC_URL.match(href)
+            yield {
+                "link": href,
+                "lib": match.group(1),
+                "name": match.group(2)
+            }
