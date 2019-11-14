@@ -3,7 +3,7 @@ import logging
 import logging.config
 
 from . import builders
-from .testers import apply_tests
+from .testers import LocalTester
 from . import web
 
 M_SEARCH_FOR_DEF = builders.search_for_def_keyword
@@ -32,6 +32,8 @@ logging.config.dictConfig({
 })
 logger = logging.getLogger(__name__)
 
+default_tester = LocalTester()
+
 
 def build_functions(query, sources=S_ALL, methods=M_ALL):
     for source in sources:
@@ -41,9 +43,10 @@ def build_functions(query, sources=S_ALL, methods=M_ALL):
                     yield function
 
 
-def get_function(query, tester, sources=S_ALL, methods=M_ALL):
+def get_function(query, test_function,
+                 sources=S_ALL, methods=M_ALL, tester=default_tester):
     for f in build_functions(query, sources=sources, methods=methods):
-        if f is not None and apply_tests(f, tester):
+        if f is not None and tester.test(f, test_function):
             return f
     raise NotImplementedError(
         'No fonction built with query "{}" passed the provided tests'

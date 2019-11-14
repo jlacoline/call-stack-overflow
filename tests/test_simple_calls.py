@@ -1,12 +1,6 @@
 import callstackoverflow as cso
 
 
-def test_first_result_calls():
-    assert cso.call_stack_overflow("quick sort", [1, 3, 2, 5, 4]) == \
-        [1, 2, 3, 4, 5]
-    assert cso.call_stack_overflow("fibonacci", 7) == 13
-
-
 def test_lambda_calls():
     # string splitting
     split_string = cso.get_function(
@@ -30,10 +24,17 @@ def test_lambda_calls():
             methods=[cso.M_PARSE_SHELL_SCRIPTS])
         assert newline_remover("remove backslash n\n") == "remove backslash n"
 
+    # log2
     log2 = cso.get_function("log 2", lambda f: f(8) == 3,
                             methods=[cso.M_READ_DOCUMENTATION_LINKS])
     assert log2(32) == 5
     assert log2(512) == 9
+
+
+def test_first_result_calls():
+    assert cso.call_stack_overflow("quick sort", [1, 3, 2, 5, 4]) == \
+        [1, 2, 3, 4, 5]
+    assert cso.call_stack_overflow("fibonacci", 7) == 13
 
 
 def test_github_calls():
@@ -43,8 +44,17 @@ def test_github_calls():
     assert fibo(5) == 5
 
 
+def test_docker_tester():
+    tester = cso.testers.DockerTester()
+    fibo = cso.get_function(
+        "fibonacci", lambda f: f(7) == 13,
+        methods=[cso.M_SEARCH_FOR_DEF], tester=tester)
+    assert fibo(5) == 5
+
+
 if __name__ == "__main__":  # no need for pytest at the moment
     test_lambda_calls()
     test_first_result_calls()
     test_github_calls()
+    test_docker_tester()
     print("*****TESTS SUCCEEDED*****")
