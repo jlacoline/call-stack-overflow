@@ -24,7 +24,11 @@ DOCKER_TEST_IMAGE = "cso-tester"
 DOCKER_RUN_ARGS = {
     "auto_remove": True,
     "user": 65534,
-    "network_disabled": True
+    "network_disabled": True,
+    "cpu_period": 100000,
+    "cpu_quota": 50000,  # 0.5 cpu
+    "mem_limit": "256m",  # 256Mo memory
+    "environment": {"TEST_TIMEOUT": 5}
 }
 
 

@@ -1,6 +1,9 @@
 FROM python:3.6.5-alpine
 
-RUN pip install dill
-COPY entrypoint.py /entrypoint.py
+ENV TEST_TIMEOUT 30
 
-ENTRYPOINT ["python", "/entrypoint.py"]
+RUN pip install dill
+COPY entrypoint.sh /entrypoint.sh
+COPY main.py /main.py
+
+ENTRYPOINT ["/entrypoint.sh"]
