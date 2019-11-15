@@ -11,10 +11,10 @@ def find_stackoverflow_answers(raw_html):
     soup = BeautifulSoup(raw_html, 'html.parser')  # TODO try except
     answers_tags = soup.find_all("div", id=re.compile(r"answer-.*"))
     for answer_tag in answers_tags:
-        yield Answer(answer_tag)
+        yield StackOverflowAnswer(answer_tag)
 
 
-class Answer:
+class StackOverflowAnswer:
     def __init__(self, bs_tag):
         self._tag = bs_tag
 

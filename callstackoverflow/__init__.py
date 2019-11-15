@@ -4,13 +4,16 @@ import logging.config
 
 from . import builders
 from .testers import apply_tests
-from .stackoverflow_parsing import find_stackoverflow_answers
 from . import web
 
 M_SEARCH_FOR_DEF = builders.search_for_def_keyword
 M_PARSE_SHELL_SCRIPTS = builders.make_functions_from_shell_scripts
 M_READ_DOCUMENTATION_LINKS = builders.make_functions_from_documentation_links
 M_ALL = [M_READ_DOCUMENTATION_LINKS, M_SEARCH_FOR_DEF, M_PARSE_SHELL_SCRIPTS]
+
+S_STACKOVERFLOW = web.fetch_stackoverflow_answers
+S_GITHUB = web.fetch_github_answers
+S_ALL = [S_STACKOVERFLOW, S_GITHUB]
 
 
 level = os.environ.get("CALLSTACKOVERFLOW_LOGLEVEL", logging.CRITICAL)
@@ -30,16 +33,16 @@ logging.config.dictConfig({
 logger = logging.getLogger(__name__)
 
 
-def build_functions(query, methods):
-    for raw_html in web.fetch_stackoverflow_html(query):
-        for answer in find_stackoverflow_answers(raw_html):
+def build_functions(query, sources=S_ALL, methods=M_ALL):
+    for source in sources:
+        for answer in source(query):
             for method in methods:
                 for function in method(answer):
                     yield function
 
 
-def get_function(query, tester, methods=M_ALL):
-    for f in build_functions(query, methods):
+def get_function(query, tester, sources=S_ALL, methods=M_ALL):
+    for f in build_functions(query, sources=sources, methods=methods):
         if f is not None and apply_tests(f, tester):
             return f
     raise NotImplementedError(
@@ -55,5 +58,5 @@ def call_stack_overflow(query, *args, **kwargs):
         return True
 
     get_function(query, just_run_it,
-                 [M_SEARCH_FOR_DEF, M_READ_DOCUMENTATION_LINKS])
+                 methods=[M_SEARCH_FOR_DEF, M_READ_DOCUMENTATION_LINKS])
     return result["out"]

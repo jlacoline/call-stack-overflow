@@ -36,7 +36,15 @@ def test_lambda_calls():
     assert log2(512) == 9
 
 
+def test_github_calls():
+    fibo = cso.get_function(
+        "fibonacci", lambda f: f(7) == 13, sources=[cso.S_GITHUB],
+        methods=[cso.M_SEARCH_FOR_DEF])
+    assert fibo(5) == 5
+
+
 if __name__ == "__main__":  # no need for pytest at the moment
     test_lambda_calls()
     test_first_result_calls()
+    test_github_calls()
     print("*****TESTS SUCCEEDED*****")
