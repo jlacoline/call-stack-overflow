@@ -8,7 +8,45 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-PERMUTATIONS_LIMIT = 120  # = nb of permutations for 5 elements
+PERMUTATIONS_LIMIT = 20
+
+GENERATED_FUNCTION_NAME = "__function_from_shell_script__"
+
+
+class ParamRegisterer(ast.NodeTransformer):
+    def __init__(self):
+        self._params = {}
+
+    def _add_param(self, type_, default):
+        current = self._params.setdefault(type_, [])
+        name = "__{}_arg_{}__".format(type_, len(current))
+        current.append((name, default))
+        return name
+
+    def params(self):
+        return reduce(add, self._params.values(), [])
+
+
+class StrNumTransformer(ParamRegisterer):
+    def visit_Str(self, node):
+        name = self._add_param("str", node)
+        return ast.copy_location(ast.Name(name, ast.Load()), node)
+
+    def visit_Num(self, node):
+        name = self._add_param("num", node)
+        return ast.copy_location(ast.Name(name, ast.Load()), node)
+
+
+class StrNumListTransformer(StrNumTransformer):
+    def visit_List(self, node):
+        name = self._add_param("list", node)
+        return ast.copy_location(ast.Name(name, ast.Load()), node)
+
+
+class StrNumListDictTransformer(StrNumListTransformer):
+    def visit_Dict(self, node):
+        name = self._add_param("dict", node)
+        return ast.copy_location(ast.Name(name, ast.Load()), node)
 
 
 def build_from_shell_script(code):
@@ -31,19 +69,24 @@ def build_from_shell_script(code):
     except SyntaxError as err:
         logger.debug("ast parsing failed: %s", err)
         raise StopIteration()
-    params = parametrize_constants(tree)
     logsuccess = False
-    for deftree in add_func_def_to_tree(tree, params):
-        scope = {}
-        try:
-            exec(compile(deftree, "<string>", "exec"), scope)
-        except Exception as err:
-            logger.debug("building function from shell script failed: %s", err)
-            raise StopIteration()
-        if not logsuccess:
-            logger.info("Successfully built a fonction from shell script")
-            logsuccess = True
-        yield scope["__function_from_shell_script__"]
+    for transformer_class in [StrNumListDictTransformer, StrNumListTransformer,
+                              StrNumTransformer]:
+        paramtree = copy.deepcopy(tree)
+        transformer = transformer_class()
+        transformer.visit(paramtree)
+        for deftree in add_func_def_to_tree(paramtree, transformer.params()):
+            scope = {}
+            try:
+                exec(compile(deftree, "<string>", "exec"), scope)
+            except Exception as err:
+                logger.debug(
+                    "building function from shell script failed: %s", err)
+                raise StopIteration()
+            if not logsuccess:
+                logger.info("Successfully built a fonction from shell script")
+                logsuccess = True
+            yield scope[GENERATED_FUNCTION_NAME]
 
 
 #  TODO implement this in ast
@@ -60,24 +103,6 @@ def clean_last_statement(raw):
     return indent+content
 
 
-def parametrize_constants(tree):
-    class _NodeTransformer(ast.NodeTransformer):
-        def __init__(self):
-            self._params = {key: [] for key in ["str", "num"]}
-
-        def visit_Str(self, node):
-            name = "__{}_arg_{}__".format("str", len(self._params["str"]))
-            self._params["str"].append((name, node))
-            return ast.copy_location(ast.Name(name, ast.Load()), node)
-
-        def visit_Num(self, node):
-            name = "__{}_arg_{}__".format("num", len(self._params["num"]))
-            self._params["num"].append((name, node))
-            return ast.copy_location(ast.Name(name, ast.Load()), node)
-
-    transformer = _NodeTransformer()
-    transformer.visit(tree)
-    return reduce(add, transformer._params.values())
 
 
 def add_func_def_to_tree(tree, params):
@@ -87,7 +112,7 @@ def add_func_def_to_tree(tree, params):
     for permutation in _permutations:
         newtree = copy.deepcopy(tree)
         newtree.body = [ast.FunctionDef(
-            name="__function_from_shell_script__",
+            name=GENERATED_FUNCTION_NAME,
             args=ast.arguments(
                 args=[ast.arg(arg=params[i][0]) for i in permutation],
                 defaults=[params[i][1] for i in permutation],
