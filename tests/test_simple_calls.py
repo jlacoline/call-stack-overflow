@@ -2,7 +2,6 @@ import callstackoverflow as cso
 
 
 def test_lambda_calls():
-    # string splitting
     split_string = cso.get_function(
         "split string",
         lambda f: f("hello world") == ["hello", "world"])
@@ -10,13 +9,19 @@ def test_lambda_calls():
     assert split_string("1 2 3 4 5 6 7 8 9") == [
         "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
-    # GCD
+    reverser = cso.get_function("reverse list",
+                                lambda f: f([1, 2, 3]) == [3, 2, 1])
+    assert reverser([4, 6, 3, 2]) == [2, 3, 6, 4]
+
+
+def test_method_search_for_def():
     gcd = cso.get_function("gcd", lambda f: f(20, 30) == 10,
                            methods=[cso.M_SEARCH_FOR_DEF])
     assert gcd(12, 8) == 4
     assert gcd(15, 9) == 3
 
-    # removing newline at the end of a string
+
+def test_method_parse_shell_script():
     for description in ["remove \\n from string",
                         "remove newline from string"]:
         newline_remover = cso.get_function(
@@ -24,7 +29,8 @@ def test_lambda_calls():
             methods=[cso.M_PARSE_SHELL_SCRIPTS])
         assert newline_remover("remove backslash n\n") == "remove backslash n"
 
-    # log2
+
+def test_method_read_doc():
     log2 = cso.get_function("log 2", lambda f: f(8) == 3,
                             methods=[cso.M_READ_DOCUMENTATION_LINKS])
     assert log2(32) == 5
@@ -50,11 +56,3 @@ def test_docker_tester():
         "fibonacci", lambda f: f(7) == 13,
         methods=[cso.M_SEARCH_FOR_DEF], tester=tester)
     assert fibo(5) == 5
-
-
-if __name__ == "__main__":  # no need for pytest at the moment
-    test_lambda_calls()
-    test_first_result_calls()
-    test_github_calls()
-    test_docker_tester()
-    print("*****TESTS SUCCEEDED*****")

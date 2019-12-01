@@ -103,8 +103,6 @@ def clean_last_statement(raw):
     return indent+content
 
 
-
-
 def add_func_def_to_tree(tree, params):
     _permutations = permutations(range(len(params)))
     # limit the number of permutations to avoid huge loops

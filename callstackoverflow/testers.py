@@ -44,7 +44,8 @@ class DockerTester:
         try:
             fn_serialized = base64.b64encode(
                 dill.dumps(fn, byref=False, recurse=True)).decode()
-            test_serialized = base64.b64encode(dill.dumps(test)).decode()
+            test_serialized = base64.b64encode(
+                dill.dumps(test, byref=False, recurse=True)).decode()
         except pickle.PicklingError as err:
             logger.warning("Failed to pickle function: {}".format(err))
             return False
