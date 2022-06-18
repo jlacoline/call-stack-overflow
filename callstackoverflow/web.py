@@ -44,7 +44,7 @@ def fetch_github_answers(query):
     except (KeyError, ValueError):
         logger.warning(
             "Could not read Github credentials, returning no result")
-        raise StopIteration()
+        return
     auth = requests.auth.HTTPBasicAuth(user, password)
     github_query = {
         "q": "def+{}+language:python".format("+".join(query.split()))
@@ -58,7 +58,7 @@ def fetch_github_answers(query):
         api_response = r.json()
     except (requests.exceptions.RequestException, ValueError) as err:
         logger.warning("Failed to query github search API: {}".format(err))
-        raise StopIteration()
+        return
 
     for item in api_response.get("items", []):
         try:

@@ -68,7 +68,7 @@ def build_from_shell_script(code):
         tree = ast.parse("\n".join(lines))
     except SyntaxError as err:
         logger.debug("ast parsing failed: %s", err)
-        raise StopIteration()
+        return
     logsuccess = False
     for transformer_class in [StrNumListDictTransformer, StrNumListTransformer,
                               StrNumTransformer]:
@@ -82,7 +82,7 @@ def build_from_shell_script(code):
             except Exception as err:
                 logger.debug(
                     "building function from shell script failed: %s", err)
-                raise StopIteration()
+                return  # exiting immediately, because there's no reason that the compilation will work with other parameter permutations
             if not logsuccess:
                 logger.info("Successfully built a fonction from shell script")
                 logsuccess = True
@@ -114,7 +114,7 @@ def add_func_def_to_tree(tree, params):
             args=ast.arguments(
                 args=[ast.arg(arg=params[i][0]) for i in permutation],
                 defaults=[params[i][1] for i in permutation],
-                kw_defaults=[], kwarg=None, kwonlyargs=[], vararg=None),
+                kw_defaults=[], kwarg=None, kwonlyargs=[], vararg=None, posonlyargs=[]),
             body=newtree.body,
             decorator_list=[])]
         ast.fix_missing_locations(newtree)
