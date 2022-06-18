@@ -1,3 +1,3 @@
 #!/bin/sh
 
-timeout -t "$TEST_TIMEOUT" python /main.py "$@"
+timeout "$TEST_TIMEOUT" python /main.py "$@"
