@@ -2,9 +2,8 @@ import re
 
 from bs4 import BeautifulSoup
 
+from .builders import PYTHON_DOCS_URL_REGEXP
 
-RE_DOC_URL = re.compile(
-    r"https?://docs\.python\.org/(?:\d/)?library/([^#]*).html#(.*)")
 
 
 def find_stackoverflow_answers(raw_html):
@@ -24,13 +23,5 @@ class StackOverflowAnswer:
             yield block.text
 
     def doc_links(self):
-        doc_links = self._tag.find_all("a", href=RE_DOC_URL)
-        for doc_link in doc_links:
-            # running through the samex regex again, not optimized
-            href = doc_link.attrs["href"]
-            match = RE_DOC_URL.match(href)
-            yield {
-                "link": href,
-                "lib": match.group(1),
-                "name": match.group(2)
-            }
+        for link in self._tag.find_all("a", href=PYTHON_DOCS_URL_REGEXP):
+            yield link["href"]

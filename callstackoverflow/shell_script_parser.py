@@ -58,7 +58,7 @@ def build_from_shell_script(code):
                         if re.match(prompt, l) else "", lines)
             break
     # remove empty lines
-    lines = list(filter(lambda l: l, lines))
+    lines = list(filter(lambda l: l.strip() != "", lines))
 
     # format last line.
     if lines:

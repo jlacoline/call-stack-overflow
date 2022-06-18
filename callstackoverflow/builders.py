@@ -5,6 +5,10 @@ from .shell_script_parser import build_from_shell_script
 
 logger = logging.getLogger(__name__)
 
+# regexp used to identify python documentation links
+PYTHON_DOCS_URL_REGEXP = re.compile(
+    r"https?://docs\.python\.org/(?:\d/)?library/([^#]*).html#(.*)")
+
 
 def _get_function_from_code(code, name):
     try:
@@ -40,9 +44,16 @@ def make_functions_from_shell_scripts(answer):
 
 
 def make_functions_from_documentation_links(answer):
-    for doclink in answer.doc_links():
+
+    for doc_link in answer.doc_links():
+        match = PYTHON_DOCS_URL_REGEXP.match(doc_link)
+        if match is None:
+            continue
+        lib = match.group(1)
+        name = match.group(2)
+
         logger.info("Trying to make a function from this "
-                    "documentation link: %s", doclink["link"])
+                    "documentation link: %s", doc_link)
 
         code = """
 try:
@@ -52,5 +63,5 @@ except Exception:
 
 def __code_from_python_doc__(*args, **kwargs):
     return {}(*args, **kwargs)
-        """.format(doclink["lib"], doclink["name"])
+        """.format(lib, name)
         yield _get_function_from_code(code, "__code_from_python_doc__")
