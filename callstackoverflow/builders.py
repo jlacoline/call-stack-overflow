@@ -35,6 +35,7 @@ def search_for_def_keyword(answer):
             yield _get_function_from_code(code, name)
 
 
+# TODO drop the "shell script" terminology, it does not make sense here
 def make_functions_from_shell_scripts(answer):
     for code in answer.code_blocks():
         logger.info(
