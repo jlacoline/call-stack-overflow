@@ -68,6 +68,15 @@ some_string = "aaa-bbb-ccc-ddd"
 separator = "-"
 
 print(some_string.split(separator))
+# ["aaa", "bbb", "ccc", "ddd"]
+        ''',
+
+        # ending with just a value
+        '''
+sep = "/"
+splitted = "a/b/c".split(sep)
+
+splitted
         ''',
 
         # python prompt

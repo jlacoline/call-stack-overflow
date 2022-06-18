@@ -59,10 +59,6 @@ def build_from_shell_script(code):
     # remove empty lines
     lines = list(filter(lambda l: l.strip() != "", lines))
 
-    # format last line.
-    if lines:
-        lines[-1] = clean_last_statement(lines[-1])
-
     try:
         tree = ast.parse("\n".join(lines))
     except SyntaxError as err:
@@ -70,7 +66,10 @@ def build_from_shell_script(code):
         return
     logsuccess = False
 
-    # modify ast by transforming elements into function parameters
+    # add "return" to the last statement
+    end_with_return(tree)
+
+    # modify the ast tree by transforming elements into function parameters
     # 1st run only turns constants into parameters
     # 2nd run also turns lists into parameters
     # 3rd run also turns dicts into parameters
@@ -79,6 +78,9 @@ def build_from_shell_script(code):
         paramtree = copy.deepcopy(tree)
         transformer = transformer_class()
         transformer.visit(paramtree)
+
+        # transform the tree into a function definition
+        # try with different argument orders
         for deftree in add_func_def_to_tree(paramtree, transformer.params()):
             scope = {}
             try:
@@ -93,18 +95,36 @@ def build_from_shell_script(code):
             yield scope[GENERATED_FUNCTION_NAME]
 
 
-#  TODO implement this in ast
-def clean_last_statement(raw):
-    match = re.match(r"^(\s*)([^\s].*)$", raw)
-    indent, content = match.groups()
-    # remove the "print" instruction if found
-    content = re.sub(r"^print\s*\(([^\)]*)\)", r"\1", content).strip()
-    content = re.sub(r"^print\s+(.*)", r"\1", content).strip()
-    # remove variable assignement if found
-    content = re.sub(r"^[^=]+\s*=(.*)", r"\1", content).strip()
-    # add a "return" statement
-    content = "return {}".format(content)
-    return indent+content
+# Modifies the given ast tree in place to add "return" to the last statement
+def end_with_return(tree):
+    if not tree.body:
+        return
+
+    last_statement = tree.body[-1]
+
+    # do nothing if the last statement is already a return instruction
+    if type(last_statement) == ast.Return:
+        return
+
+    if type(last_statement) == ast.Expr:
+        last_value = last_statement.value
+
+        # if the last statement is a print, remove the print call and return the first argument
+        # TODO: what about print calls like `print(f"The answer is {answer}")` ?
+        if type(last_value) == ast.Call \
+                and type(last_value.func) == ast.Name \
+                and last_value.func.id == 'print':
+
+            if last_value.args:
+                last_value = last_value.args[0]
+    elif type(last_statement) == ast.Assign:
+        # if the last statement is a variable assignement, remove the assignement and return the value
+        last_value = last_statement.value
+    else:
+        last_value = last_statement
+
+    # add the return instruction
+    tree.body[-1] = ast.Return(last_value)
 
 
 def add_func_def_to_tree(tree, params):
